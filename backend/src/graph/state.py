@@ -23,6 +23,6 @@ class GraphState(TypedDict):
 
     final_result: Literal["FAIL", "PASS"]
 
-    report: str
+    report: str= Field(...,description="The final report created by the system based on the compliance results in markdown format")
 
     errors: Annotated[List[str], operator.add]
