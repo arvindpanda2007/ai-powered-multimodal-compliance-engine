@@ -11,10 +11,9 @@ class ComplianceIssue(BaseModel):
 
 
 class GraphState(TypedDict):
-    video_url: str
-    video_id: str
-
+    video_url: Optional[str]
     ingestion_video_path: str
+    
     video_metadata: Dict[str, str]
     transcript: Optional[str]
     ocr_text: List[str]
