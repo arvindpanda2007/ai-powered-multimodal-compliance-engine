@@ -8,5 +8,10 @@ from backend.src.graph.nodes import (
 
 def create_graph():
     """
-    Docstring for create_graph
-    """
+Constructs and compiles the LangGraph workflow
+
+Returns:
+    Compiled Graph: runnable graph object for execution
+"""
+
+    
