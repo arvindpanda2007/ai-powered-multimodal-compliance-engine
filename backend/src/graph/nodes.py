@@ -7,9 +7,6 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_community.vectorstores import AzureSearch
-import yt_dlp
-from pathlib import Path
-from urllib.parse import urlparse
 
 from backend.src.graph.state import GraphState, ComplianceIssue
 from backend.src.services.video_indexer import VideoIndexerService
@@ -21,7 +18,7 @@ logging.basicConfig(level=logging.INFO)
 
 load_dotenv()
 
-def index_video_node(state: VideoAuditState) -> Dict[str, Any]:
+def IndexVideoNode(state: GraphState) -> Dict[str, Any]:
     '''
     Downloads the youtube video from the url
     Uploads to the Azure Video indexer
@@ -81,127 +78,127 @@ def index_video_node(state: VideoAuditState) -> Dict[str, Any]:
             "ocr_text": [],
         }
 
-    def AuditContentNode(state: GraphState):
-        '''Uses existing knowledge base and GPT-4o to audit Video and audio content'''
-        try:
-            logger.info(
-                "---[NODE: AUDITOR]----Querying Knowledge Base and LLM----"
-            )
-
-            transcript = state.get("transcript", "")
-            ocr_text = state.get("ocr_text", [])
-
-            if not transcript and not ocr_text:
-                return {
-                    "errors": ["No transcript or OCR text found"],
-                    "final_result": "FAIL",
-                }
-
-            llm = ChatOpenAI(
-                model="gpt-4o",
-                temperature=0
-            )
-
-            embeddings = OpenAIEmbeddings(
-                model="text-embedding-3-small"
-            )
-
-            vector_store = AzureSearch(
-                azure_search_endpoint=os.getenv(
-                    "AZURE_SEARCH_ENDPOINT"
-                ),
-                azure_search_key=os.getenv(
-                    "AZURE_SEARCH_API_KEY"
-                ),
-                index_name=os.getenv(
-                    "AZURE_SEARCH_INDEX_NAME"
-                ),
-                embedding_function=embeddings.embed_query,
-            )
-            
-            query_text = f"{transcript}{' '.join(ocr_text)}"
-
-            docs = vector_store.similarity_search(
-                query_text,
-                k=7
-            )
-
-            retrieved_rules = "\n\n".join(
-        f"Rule ID: {doc.metadata.get('rule_id')}\n"
-        f"{doc.page_content}"
-        for doc in docs
-    )
-
-            logger.info(
-                f"Retrieved {len(docs)} compliance rules"
-            )
-
-            prompt = ChatPromptTemplate.from_messages([
-        (
-            "system",
-            """
-    You are a senior brand compliance auditor.
-
-    OFFICIAL REGULATORY RULES:
-    {retrieved_rules}
-
-    INSTRUCTIONS:
-    ONLY flag violations that are directly supported by the retrieved regulatory rules. Do not infer violations from general knowledge.
-
-    1. Analyze both transcript and OCR text and assign each violation with appropriate timestamp.
-    2. Identify all compliance violations.
-    3. Explain why each violation occurred.
-    4. Assign severity.
-    5. Provide evidence timestamps.
-    """
-        ),
-        (
-            "human",
-            """
-    VIDEO_METADATA:
-    {video_metadata}
-
-    TRANSCRIPT:
-    {transcript}
-
-    OCR_TEXT:
-    {ocr_text}
-    """
+def AuditContentNode(state: GraphState):
+    '''Uses existing knowledge base and GPT-4o to audit Video and audio content'''
+    try:
+        logger.info(
+            "---[NODE: AUDITOR]----Querying Knowledge Base and LLM----"
         )
-    ])
 
-            logger.info("---[NODE: AUDITOR]----Prepared prompts ... Initiating LLM Query----")
-            
-            structured_llm = llm.with_structured_output(
-                ComplianceIssue
-            )
+        transcript = state.get("transcript", "")
+        ocr_text = state.get("ocr_text", [])
 
-            chain = prompt | structured_llm
-
-            result = chain.invoke({
-                "retrieved_rules": retrieved_rules,
-                "video_metadata": state.get("video_metadata", {}),
-                "transcript": transcript,
-                "ocr_text": ocr_text,
-            })
-
-            prompt = f"generate a concise report based on this result {result} from a video compliance report in a markdown format"
-            report = llm.invoke(prompt).content
-
+        if not transcript and not ocr_text:
             return {
-        "compliance_results": [result],
-        "final_result": result.status,
-        "report": report
-    }
-            
-
-        except Exception as e:
-
-            logger.error(
-                f"Error in AuditContentNode: {str(e)}"
-            )
-
-            return {
-                "errors": [str(e)],
-                "final_result": "unknown",
+                "errors": ["No transcript or OCR text found"],
+                "final_result": "FAIL",
             }
+
+        llm = ChatOpenAI(
+            model="gpt-4o",
+            temperature=0
+        )
+
+        embeddings = OpenAIEmbeddings(
+            model="text-embedding-3-small"
+        )
+
+        vector_store = AzureSearch(
+            azure_search_endpoint=os.getenv(
+                "AZURE_SEARCH_ENDPOINT"
+            ),
+            azure_search_key=os.getenv(
+                "AZURE_SEARCH_API_KEY"
+            ),
+            index_name=os.getenv(
+                "AZURE_SEARCH_INDEX_NAME"
+            ),
+            embedding_function=embeddings.embed_query,
+        )
+        
+        query_text = f"{transcript} {' '.join(ocr_text)}"
+
+        docs = vector_store.similarity_search(
+            query_text,
+            k=7
+        )
+
+        retrieved_rules = "\n\n".join(
+    f"Rule ID: {doc.metadata.get('rule_id')}\n"
+    f"{doc.page_content}"
+    for doc in docs
+)
+
+        logger.info(
+            f"Retrieved {len(docs)} compliance rules"
+        )
+
+        prompt = ChatPromptTemplate.from_messages([
+    (
+        "system",
+        """
+You are a senior brand compliance auditor.
+
+OFFICIAL REGULATORY RULES:
+{retrieved_rules}
+
+INSTRUCTIONS:
+ONLY flag violations that are directly supported by the retrieved regulatory rules. Do not infer violations from general knowledge.
+
+1. Analyze both transcript and OCR text and assign each violation with appropriate timestamp.
+2. Identify all compliance violations.
+3. Explain why each violation occurred.
+4. Assign severity.
+5. Provide evidence timestamps.
+"""
+    ),
+    (
+        "human",
+        """
+VIDEO_METADATA:
+{video_metadata}
+
+TRANSCRIPT:
+{transcript}
+
+OCR_TEXT:
+{ocr_text}
+"""
+    )
+])
+
+        logger.info("---[NODE: AUDITOR]----Prepared prompts ... Initiating LLM Query----")
+        
+        structured_llm = llm.with_structured_output(
+            ComplianceIssue
+        )
+
+        chain = prompt | structured_llm
+
+        result = chain.invoke({
+            "retrieved_rules": retrieved_rules,
+            "video_metadata": state.get("video_metadata", {}),
+            "transcript": transcript,
+            "ocr_text": ocr_text,
+        })
+
+        prompt = f"generate a concise report based on this result {result} from a video compliance report in a markdown format"
+        report = llm.invoke(prompt).content
+
+        return {
+    "compliance_results": [result],
+    "final_result": result.status,
+    "report": report
+}
+        
+
+    except Exception as e:
+
+        logger.error(
+            f"Error in AuditContentNode: {str(e)}"
+        )
+
+        return {
+            "errors": [str(e)],
+            "final_result": "unknown",
+        }
