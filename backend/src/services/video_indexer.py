@@ -113,26 +113,26 @@ class VideoIndexerService:
             arm_token = self.get_access_token()
             vi_token = self.get_account_token(arm_token)
 
-        url = f"https://api.videoindexer.ai/{self.location}/Accounts/{self.account_id}/Videos/{video_id}/Index"
+            url = f"https://api.videoindexer.ai/{self.location}/Accounts/{self.account_id}/Videos/{video_id}/Index"
 
-        params = {
-            "accessToken": vi_token
-        }
+            params = {
+                "accessToken": vi_token
+            }
 
-        response = requests.get(url, params=params)
-        data = response.json()
+            response = requests.get(url, params=params)
+            data = response.json()
 
-        state = data.get("state")
+            state = data.get("state")
 
-        if state == "Processed":
-            return data
-        elif state == "Failed":
-            raise Exception("Video indexing failed in Azure")
-        elif state == "Quarantined":
-            raise Exception("Video quarantined (Copyright/Content Policy Violation)")
+            if state == "Processed":
+                return data
+            elif state == "Failed":
+                raise Exception("Video indexing failed in Azure")
+            elif state == "Quarantined":
+                raise Exception("Video quarantined (Copyright/Content Policy Violation)")
 
-        logger.info(f"Status {state} ......waiting 30s")
-        time.sleep(30)
+            logger.info(f"Status {state} ......waiting 30s")
+            time.sleep(30)
 
     def extract_data(self, vi_json):
         """Parses the JSON into our state format."""

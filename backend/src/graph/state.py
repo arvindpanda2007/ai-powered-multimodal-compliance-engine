@@ -14,11 +14,11 @@ class ComplianceIssue(BaseModel):
 
 
 class GraphState(TypedDict):
-    video_url: Optional[str, None]
+    video_url: Optional[str]
     ingestion_video_path: str
     
     video_metadata: Dict[str, str]
-    transcript: Optional[List[str]]
+    transcript: Optional[str]
     ocr_text: List[str]
 
     compliance_results: Annotated[List[ComplianceIssue], operator.add]
