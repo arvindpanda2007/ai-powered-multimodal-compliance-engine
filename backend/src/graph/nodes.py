@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.INFO)
 
 load_dotenv()
 
-def IndexVideoNode(state: GraphState) -> Dict[str, Any]:
+def VideoIndexerNode(state: GraphState) -> Dict[str, Any]:
     '''
     Downloads the youtube video from the url
     Uploads to the Azure Video indexer

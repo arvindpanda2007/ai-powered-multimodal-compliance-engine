@@ -1,4 +1,4 @@
-from langgraph.graph import StateGraph, END
+from langgraph.graph import StateGraph, END, START
 from backend.src.graph.state import GraphState
 
 from backend.src.graph.nodes import (
