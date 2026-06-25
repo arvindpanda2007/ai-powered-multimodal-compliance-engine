@@ -79,9 +79,9 @@ def VideoIndexerNode(state: GraphState) -> Dict[str, Any]:
         }
 
     finally:
-    if local_path and os.path.exists(local_path):
-        os.remove(local_path)
-        logger.info(f"Deleted temporary file: {local_path}")
+        if local_path and os.path.exists(local_path):
+            os.remove(local_path)
+            logger.info(f"Deleted temporary file: {local_path}")
 
 def AuditContentNode(state: GraphState):
     '''Uses existing knowledge base and GPT-4o to audit Video and audio content'''
