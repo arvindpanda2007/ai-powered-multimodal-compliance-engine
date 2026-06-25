@@ -64,6 +64,8 @@ class VideoIndexerService:
         "outtmpl": output_path,
         "quiet": False,
         "no_warnings": False,
+        "overwrites": True,
+
 
         # Add these options:
         "extractor_args": {
@@ -97,16 +99,33 @@ class VideoIndexerService:
             "name": video_name,
             "privacy": "Private",
             "indexingPreset": "Default",
+            "preventDuplicates": False,
         }
 
         with open(video_path, "rb") as video_file:
             files = {"file": video_file}
             response = requests.post(api_url, params=params, files=files)
 
-        if response.status_code != 200:
-            raise Exception(f"Azure upload failed: {response.text}")
+        if response.status_code == 200:
+            return response.json().get("id")
 
-        
+        error = response.json()
+
+        if error.get("ErrorType") == "ALREADY_EXISTS":
+            message = error.get("Message", "")
+
+            match = re.search(r"video id: '([^']+)'", message)
+
+            if match:
+                existing_video_id = match.group(1)
+
+                logger.info(
+                    f"Video already exists. Using existing Azure Video ID: {existing_video_id}"
+                )
+
+                return existing_video_id
+
+        raise Exception(f"Azure upload failed: {response.text}")
 
     def wait_for_processing(self, video_id):
         logger.info(f"Waiting for the video {video_id} to process...")

@@ -6,6 +6,7 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import AzureSearch
+from pathlib import Path
 
 load_dotenv()
 
@@ -22,8 +23,8 @@ def index_documents():
 Reads the PDFs, chunks them, and uploads them to Azure AI Search for the rulebase
 """
 
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    data_folder = os.path.join(current_dir, "../../../backend/data")
+    current_dir = Path(__file__).resolve().parent
+    data_folder = current_dir.parent / "data"
 
     logger.info("=" * 60)
     logger.info("Environment Configuration Check:")
@@ -56,7 +57,12 @@ Reads the PDFs, chunks them, and uploads them to Azure AI Search for the rulebas
         logger.error(f"Failed to initialize embeddings: {e}")
         logger.error("Please verify your OPENAI_API_KEY and embedding model configuration.")
         return
-
+    vector_store = AzureSearch(
+    azure_search_endpoint=os.getenv("AZURE_SEARCH_ENDPOINT"),
+    azure_search_key=os.getenv("AZURE_SEARCH_API_KEY"),
+    index_name=os.getenv("AZURE_SEARCH_INDEX_NAME"),
+    embedding_function=embeddings.embed_query,
+)
     pdf_files = glob.glob(os.path.join(data_folder, "*.pdf"))
 
     if not pdf_files:
@@ -70,28 +76,28 @@ Reads the PDFs, chunks them, and uploads them to Azure AI Search for the rulebas
     all_splits = []
 
     for pdf_path in pdf_files:
-    try:
-        logger.info(f"Loading: {os.path.basename(pdf_path)}......")
+        try:
+            logger.info(f"Loading: {os.path.basename(pdf_path)}......")
 
-        loader = PyPDFLoader(pdf_path)
-        raw_docs = loader.load()
+            loader = PyPDFLoader(pdf_path)
+            raw_docs = loader.load()
 
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=200
-        )
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=1000,
+                chunk_overlap=200
+            )
 
-        splits = text_splitter.split_documents(raw_docs)
+            splits = text_splitter.split_documents(raw_docs)
 
-        for split in splits:
-            split.metadata["source"] = os.path.basename(pdf_path)
+            for split in splits:
+                split.metadata["source"] = os.path.basename(pdf_path)
 
-        all_splits.extend(splits)
+            all_splits.extend(splits)
 
-        logger.info(f"Split into {len(splits)} chunks.")
+            logger.info(f"Split into {len(splits)} chunks.")
 
-    except Exception as e:
-        logger.error(f"Failed to process {pdf_path}: {e}")
+        except Exception as e:
+            logger.error(f"Failed to process {pdf_path}: {e}")
 
     if all_splits:
         logger.info(

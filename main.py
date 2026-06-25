@@ -41,21 +41,21 @@ def run_cli_simulation():
 
         print("\nCompliance Audit Report ==")
         print(f"Video ID : {final_state.get('video_id')}")
-        print(f"Status : {final_state.get('final_status')}")
+        print(f"Status : {final_state.get('final_result')}")
 
         print("\n[VIOLATIONS DETECTED]")
         results = final_state.get("compliance_results", [])
+
         if results:
             for issue in results:
                 print(
-                    f"- [{issue.get('severity')}] [{issue.get('category')}] : {issue.get('description')}"
+                    f"- [{issue.severity}] [{issue.category}] : {issue.description}"
                 )
-
         else:
             print("No violations detected.....")
 
         print("\n[FINAL SUMMARY]")
-        print(final_state.get("final_report"))
+        print(final_state.get("report"))
 
     except Exception as e:
         logger.error(f"Workflow execution failed: {str(e)}")
