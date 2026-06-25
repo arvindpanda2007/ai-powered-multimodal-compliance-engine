@@ -106,6 +106,8 @@ class VideoIndexerService:
         if response.status_code != 200:
             raise Exception(f"Azure upload failed: {response.text}")
 
+        
+
     def wait_for_processing(self, video_id):
         logger.info(f"Waiting for the video {video_id} to process...")
 
