@@ -3,10 +3,10 @@ import logging
 
 from fastapi import FastAPI, HTTPException
 
-from pydantic import BaseModel
-from typing import List, Optional
+from pydantic import BaseModel, Field
+from typing import List, Optional,Literal, Annotated, TypedDict,Dict
+import operator
 from dotenv import load_dotenv
-
 load_dotenv(override=True)
 from backend.src.api.telemetry import setup_telemetry
 
@@ -15,7 +15,7 @@ from backend.src.graph.workflow import app as compliance_graph
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("api-server")
 app = FastAPI(
-    title="AI Video Compliance Engine API",
+    title="ai-powered Video Compliance Engine API",
     description="API for auditing video content against the brand compliance rules.",
     version="1.0.0"
 )                    
@@ -59,8 +59,35 @@ class GraphState(TypedDict):
 
 @app.post("/audit", response_model=GraphState)
 
+@app.post("/audit")
 async def audit_video(request: AuditRequest):
+    session_id = str(uuid.uuid4())
+    video_id_short = f"vid_{session_id[:8]}"
+
+    initial_inputs = {
+        "video_url": request.video_url,
+        "video_id": video_id_short,
+        "compliance_results": [],
+        "errors": []
+    }
+
+    try:
+        final_state = compliance_graph.invoke(initial_inputs)
+        return final_state
+
+    except Exception as e:
+        logger.exception("Audit Failed")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Workflow Execution Failed: {str(e)}"
+        )
+
+@app.get("/health")
+def health_check():
     '''
-    Main API endpoint that triggers the compliance audit workflow.
+    Endpoint to verify if API is working or not.
     '''
-    
+    return {
+        "status": "healthy",
+        "service": "ai-powered Video Compliance Engine API"
+    }
