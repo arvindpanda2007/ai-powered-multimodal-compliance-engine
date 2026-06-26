@@ -57,8 +57,6 @@ class GraphState(TypedDict):
 
     errors: Annotated[List[str], operator.add]
 
-@app.post("/audit", response_model=GraphState)
-
 @app.post("/audit")
 async def audit_video(request: AuditRequest):
     session_id = str(uuid.uuid4())
